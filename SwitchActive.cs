@@ -52,6 +52,10 @@ public class SwitchActiveVessel : MonoBehaviour
         }
     }
 
+    private void jumpToVessel(Vessel vessel) {
+        FlightGlobals.ForceSetActiveVessel(vessel); // This is more like hittting `]`.
+    }
+
 
     public static Dictionary<Vessel, List<GameObject>> meshListLookup = new Dictionary<Vessel, List<GameObject>>();
     public static Dictionary<GameObject, ProtoPartSnapshot> referencePart = new Dictionary<GameObject, ProtoPartSnapshot>();
@@ -72,15 +76,14 @@ public class SwitchActiveVessel : MonoBehaviour
             if (Event.current.type == EventType.Repaint
                     && GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
                 hoverVessel = vessel;
+        }
+        if (clickedVessel != null)
+            jumpToVessel(clickedVessel);
 
-        }
-        if (clickedVessel != null) {
-            say(clickedVessel, "click");
-        }
 
         highlight(hoverVessel);
 
-        GUILayout.Label(this.debugLabel);
+        // GUILayout.Label(this.debugLabel);
         GUILayout.EndVertical();
         GUI.DragWindow();
     }
