@@ -11,18 +11,19 @@ public class SwitchActiveVessel : MonoBehaviour
     // private SortedSet<Vessel> activeVessels = new SortedSet<Vessel>(new VesselSorter()); need newer vm?
     private HashSet<Vessel> activeVessels = new HashSet<Vessel>();
     string debugLabel = "";
+    private bool pluginActive = true;
 
     void say(Vessel target, string verb) {
-        string s = verb + " Vessel: "+
-                   ( target==null ? "NULL" : target.GetName() )
+        string s = verb + " Vessel: " +
+                   (target == null ? "NULL" : target.GetName())
                    + "\n";
-        debugLabel+=s;
+        debugLabel += s;
         print(s);
     }
     private void ShipOnRails(Vessel vessel) {
         var removed = activeVessels.Remove(vessel);
         if (removed != true) {
-            print("tried to remove "+vessel.GetName()+", but failed");
+            print("tried to remove " + vessel.GetName() + ", but failed");
         }
         say(vessel, "on rails");
     }
@@ -33,6 +34,22 @@ public class SwitchActiveVessel : MonoBehaviour
 
     private void ShipLoaded(Vessel vessel) {
         say(vessel, "loaded");
+    }
+
+    private Vessel highlightedVessel = null;
+    private void highlight(Vessel vessel) {
+        if (highlightedVessel != null && highlightedVessel != vessel) {
+            highlightedVessel.Parts.ForEach(p => p.SetHighlightDefault());
+        }
+
+        highlightedVessel = vessel;
+
+        if (highlightedVessel != null) {
+            highlightedVessel.Parts.ForEach(p => {
+                p.SetHighlightColor(Color.green);
+                p.SetHighlight(true);
+            });
+        }
     }
 
 
@@ -46,15 +63,30 @@ public class SwitchActiveVessel : MonoBehaviour
     {
         GUILayout.BeginVertical();
 
+
+        Vessel clickedVessel = null;
+        Vessel hoverVessel = null;
+        foreach (var vessel in activeVessels) {
+            if (GUILayout.Button(vessel.GetName()))
+                clickedVessel = vessel;
+            if (Event.current.type == EventType.Repaint
+                    && GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
+                hoverVessel = vessel;
+
+        }
+        if (clickedVessel != null) {
+            say(clickedVessel, "click");
+        }
+
+        highlight(hoverVessel);
+
         GUILayout.Label(this.debugLabel);
-
-
         GUILayout.EndVertical();
         GUI.DragWindow();
     }
     private void drawGUI()
     {
-        if (this.debugLabel != null)
+        if (this.pluginActive)
             windowRect = GUILayout.Window(1, windowRect, WindowGUI, "");
     }
 
