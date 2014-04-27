@@ -59,14 +59,19 @@ public class SwitchActiveVessel : MonoBehaviour
 
 
     Rect windowRect = new Rect(200, 30, 250, 0);
+    VesselFilterUi vesselFilter = VesselFilterUi.CreateSaneDefault(); // move to ui class
     private void WindowGUI(int windowID)
     {
         GUILayout.BeginVertical();
 
+        vesselFilter.AddFilterToActiveGUI();
 
         Vessel clickedVessel = null;
         Vessel hoverVessel = null;
         foreach (var vessel in activeVessels) {
+            if (!vesselFilter.isVesselTypeEnabled(vessel.vesselType))
+                continue;
+
             if (GUILayout.Button(vessel.GetName()))
                 clickedVessel = vessel;
             if (Event.current.type == EventType.Repaint
@@ -85,8 +90,8 @@ public class SwitchActiveVessel : MonoBehaviour
     }
     private void drawGUI()
     {
-        if (this.pluginActive)
-            windowRect = GUILayout.Window(1, windowRect, WindowGUI, "");
+        if (!this.pluginActive) return;
+        windowRect = GUILayout.Window(1, windowRect, WindowGUI, "");
     }
 
     void Awake()
