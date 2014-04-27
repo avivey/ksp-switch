@@ -10,26 +10,16 @@ public class SwitchActiveVessel : MonoBehaviour
 {
     // private SortedSet<Vessel> activeVessels = new SortedSet<Vessel>(new VesselSorter()); need newer vm?
     private HashSet<Vessel> activeVessels = new HashSet<Vessel>();
-    string debugLabel = "";
     private bool pluginActive = true;
 
-    void say(Vessel target, string verb) {
-        string s = verb + " Vessel: " +
-                   (target == null ? "NULL" : target.GetName())
-                   + "\n";
-        debugLabel += s;
-        print(s);
-    }
     private void ShipOffline(Vessel vessel) {
         var removed = activeVessels.Remove(vessel);
         if (removed != true) {
             print("tried to remove " + vessel.GetName() + ", but failed");
         }
-        say(vessel, "on rails");
     }
     private void ShipOnline(Vessel vessel) {
         activeVessels.Add(vessel);
-        say(vessel, "off rails");
     }
 
     private Vessel highlightedVessel = null;
@@ -81,10 +71,8 @@ public class SwitchActiveVessel : MonoBehaviour
         if (clickedVessel != null)
             jumpToVessel(clickedVessel);
 
-
         highlight(hoverVessel);
 
-        // GUILayout.Label(this.debugLabel);
         GUILayout.EndVertical();
         GUI.DragWindow();
     }
@@ -93,18 +81,13 @@ public class SwitchActiveVessel : MonoBehaviour
         if (!this.pluginActive) return;
         var keepSkin = GUI.skin;
         GUI.skin = null;
+        windowRect.height = 40;
         windowRect = GUILayout.Window(1, windowRect, WindowGUI, "");
         GUI.skin = keepSkin;
     }
 
-    void Awake()
-    {
-        print("am awake");
-    }
-
     void Start()
     {
-        print("pre start");
         RenderingManager.AddToPostDrawQueue(3, drawGUI);
 
         GameEvents.onVesselGoOffRails.Add(ShipOnline);
@@ -119,7 +102,6 @@ public class SwitchActiveVessel : MonoBehaviour
         RenderingManager.RemoveFromPostDrawQueue(3, drawGUI);
         GameEvents.onVesselGoOnRails.Remove(ShipOffline);
         GameEvents.onVesselGoOffRails.Remove(ShipOnline);
-        print("post destroy");
     }
 
     private static double doubleValue(ConfigNode node, string key) {
@@ -130,13 +112,6 @@ public class SwitchActiveVessel : MonoBehaviour
 
     void print(string text) {
         MonoBehaviour.print("SwitchActive: " + text);
-    }
-}
-
-class VesselSorter : IComparer<Vessel>
-{
-    public int Compare(Vessel x, Vessel y) {
-        return x.id.CompareTo(y);
     }
 }
 
