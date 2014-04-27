@@ -82,7 +82,7 @@ public class SwitchActiveVessel : MonoBehaviour
         var keepSkin = GUI.skin;
         GUI.skin = null;
         windowRect.height = 40;
-        windowRect = GUILayout.Window(1, windowRect, WindowGUI, "");
+        windowRect = GUILayout.Window(1, windowRect, WindowGUI, "Switch To");
         GUI.skin = keepSkin;
     }
 
