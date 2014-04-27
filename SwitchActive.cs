@@ -91,7 +91,10 @@ public class SwitchActiveVessel : MonoBehaviour
     private void drawGUI()
     {
         if (!this.pluginActive) return;
+        var keepSkin = GUI.skin;
+        GUI.skin = null;
         windowRect = GUILayout.Window(1, windowRect, WindowGUI, "");
+        GUI.skin = keepSkin;
     }
 
     void Awake()
