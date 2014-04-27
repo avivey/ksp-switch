@@ -20,20 +20,16 @@ public class SwitchActiveVessel : MonoBehaviour
         debugLabel += s;
         print(s);
     }
-    private void ShipOnRails(Vessel vessel) {
+    private void ShipOffline(Vessel vessel) {
         var removed = activeVessels.Remove(vessel);
         if (removed != true) {
             print("tried to remove " + vessel.GetName() + ", but failed");
         }
         say(vessel, "on rails");
     }
-    private void ShipOffRails(Vessel vessel) {
+    private void ShipOnline(Vessel vessel) {
         activeVessels.Add(vessel);
         say(vessel, "off rails");
-    }
-
-    private void ShipLoaded(Vessel vessel) {
-        say(vessel, "loaded");
     }
 
     private Vessel highlightedVessel = null;
@@ -102,17 +98,19 @@ public class SwitchActiveVessel : MonoBehaviour
     {
         print("pre start");
         RenderingManager.AddToPostDrawQueue(3, drawGUI);
-        GameEvents.onVesselLoaded.Add(ShipLoaded);
-        GameEvents.onVesselGoOnRails.Add(ShipOnRails);
-        GameEvents.onVesselGoOffRails.Add(ShipOffRails);
+
+        GameEvents.onVesselGoOffRails.Add(ShipOnline);
+        GameEvents.onVesselCreate.Add(ShipOnline);
+
+        GameEvents.onVesselGoOnRails.Add(ShipOffline);
+        GameEvents.onVesselDestroy.Add(ShipOffline);
     }
 
     void OnDestroy()
     {
         RenderingManager.RemoveFromPostDrawQueue(3, drawGUI);
-        GameEvents.onVesselGoOnRails.Remove(ShipOnRails);
-        GameEvents.onVesselGoOffRails.Remove(ShipOffRails);
-        GameEvents.onVesselLoaded.Remove(ShipLoaded);
+        GameEvents.onVesselGoOnRails.Remove(ShipOffline);
+        GameEvents.onVesselGoOffRails.Remove(ShipOnline);
         print("post destroy");
     }
 
