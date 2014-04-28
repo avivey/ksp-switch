@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using Toolbar;
 
 namespace SwitchActiveVessel
 {
@@ -11,6 +12,7 @@ public class SwitchActiveVessel : MonoBehaviour
     private HashSet<Vessel> activeVessels = new HashSet<Vessel>();
     private bool pluginActive = true;
     private Rect windowRect = new Rect();
+    private Toolbar.IButton toolbarButton;
 
     private void ShipOffline(Vessel vessel) {
         var removed = activeVessels.Remove(vessel);
@@ -97,6 +99,8 @@ public class SwitchActiveVessel : MonoBehaviour
 
         windowRect.width = 250;
 
+        setupToolbar();
+
         GameEvents.onVesselGoOffRails.Add(ShipOnline);
         GameEvents.onVesselCreate.Add(ShipOnline);
 
@@ -112,12 +116,25 @@ public class SwitchActiveVessel : MonoBehaviour
         config.SetValue("plugin_active", pluginActive);
         config.save();
 
+        teardownToolbar();
+
         RenderingManager.RemoveFromPostDrawQueue(3, drawGUI);
         GameEvents.onVesselGoOffRails.Remove(ShipOnline);
         GameEvents.onVesselCreate.Remove(ShipOnline);
 
         GameEvents.onVesselGoOnRails.Remove(ShipOffline);
         GameEvents.onVesselDestroy.Remove(ShipOffline);
+    }
+
+    private void setupToolbar() {
+        this.toolbarButton = Toolbar.ToolbarManager.Instance.add("switchvessel", "show");
+        toolbarButton.TexturePath = "SwitchVessel/SwitchVessel";
+        toolbarButton.ToolTip = "Toggle Quick Vessel Switching";
+        toolbarButton.OnClick += e => pluginActive = !pluginActive;
+    }
+
+    private void teardownToolbar() {
+        toolbarButton.Destroy();
     }
 
     private static double doubleValue(ConfigNode node, string key) {
