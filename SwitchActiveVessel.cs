@@ -8,9 +8,9 @@ namespace SwitchActiveVessel
 [KSPAddon(KSPAddon.Startup.Flight, false)]
 public class SwitchActiveVessel : MonoBehaviour
 {
-    // private SortedSet<Vessel> activeVessels = new SortedSet<Vessel>(new VesselSorter()); need newer vm?
     private HashSet<Vessel> activeVessels = new HashSet<Vessel>();
     private bool pluginActive = true;
+    private Rect windowRect = new Rect();
 
     private void ShipOffline(Vessel vessel) {
         var removed = activeVessels.Remove(vessel);
@@ -48,7 +48,6 @@ public class SwitchActiveVessel : MonoBehaviour
     public static List<Vessel> watchList = new List<Vessel>();
 
 
-    Rect windowRect = new Rect(200, 30, 250, 0);
     VesselFilterUi vesselFilter = VesselFilterUi.CreateSaneDefault(); // move to ui class
     private void WindowGUI(int windowID)
     {
@@ -90,6 +89,14 @@ public class SwitchActiveVessel : MonoBehaviour
     {
         RenderingManager.AddToPostDrawQueue(3, drawGUI);
 
+        var config = KSP.IO.PluginConfiguration.CreateForType<SwitchActiveVessel>();
+        config.load();
+        windowRect.x = config.GetValue("window_x", 200);
+        windowRect.y = config.GetValue("window_y", 30);
+        pluginActive = config.GetValue("plugin_active", true);
+
+        windowRect.width = 250;
+
         GameEvents.onVesselGoOffRails.Add(ShipOnline);
         GameEvents.onVesselCreate.Add(ShipOnline);
 
@@ -99,9 +106,18 @@ public class SwitchActiveVessel : MonoBehaviour
 
     void OnDestroy()
     {
+        var config = KSP.IO.PluginConfiguration.CreateForType<SwitchActiveVessel>();
+        config.SetValue("window_x", (int)windowRect.x);
+        config.SetValue("window_y", (int)windowRect.y);
+        config.SetValue("plugin_active", pluginActive);
+        config.save();
+
         RenderingManager.RemoveFromPostDrawQueue(3, drawGUI);
-        GameEvents.onVesselGoOnRails.Remove(ShipOffline);
         GameEvents.onVesselGoOffRails.Remove(ShipOnline);
+        GameEvents.onVesselCreate.Remove(ShipOnline);
+
+        GameEvents.onVesselGoOnRails.Remove(ShipOffline);
+        GameEvents.onVesselDestroy.Remove(ShipOffline);
     }
 
     private static double doubleValue(ConfigNode node, string key) {
