@@ -75,7 +75,7 @@ public class SwitchActiveVessel : MonoBehaviour
         highlight(hoverVessel);
 
         GUILayout.EndVertical();
-        GUI.DragWindow();
+        GUI.DragWindow(new Rect(0, 0, 1000, 20));
     }
     private void drawGUI()
     {
