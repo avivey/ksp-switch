@@ -27,16 +27,15 @@ public class SwitchActiveVessel : MonoBehaviour
     private Vessel highlightedVessel = null;
     private void highlight(Vessel vessel) {
         if (highlightedVessel != null && highlightedVessel != vessel) {
-            highlightedVessel.Parts.ForEach(p => p.SetHighlightDefault());
+            highlightedVessel.rootPart.SetHighlightDefault();
         }
 
         highlightedVessel = vessel;
 
         if (highlightedVessel != null) {
-            highlightedVessel.Parts.ForEach(p => {
-                p.SetHighlightColor(Color.green);
-                p.SetHighlight(true);
-            });
+            var p = highlightedVessel.rootPart;
+            p.SetHighlightColor(Color.green);
+            p.SetHighlight(true, true);
         }
     }
 
