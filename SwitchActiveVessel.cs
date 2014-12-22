@@ -4,24 +4,30 @@ using System.Collections.Generic;
 using UnityEngine;
 using Toolbar;
 
+
 namespace SwitchActiveVessel
 {
 [KSPAddon(KSPAddon.Startup.Flight, false)]
 public class SwitchActiveVessel : MonoBehaviour
 {
-    private HashSet<Vessel> activeVessels = new HashSet<Vessel>();
+    private IEnumerable<Vessel> activeVessels = new Vessel[0];
     private bool pluginActive = true;
     private Rect windowRect = new Rect();
-    private Toolbar.IButton toolbarButton;
 
-    private void ShipOffline(Vessel vessel) {
-        var removed = activeVessels.Remove(vessel);
-        if (removed != true) {
-            print("tried to remove " + vessel.GetName() + ", but failed");
-        }
+    private bool updateNeeded = true;
+    private void scheduleUpdate(object __) {
+        this.updateNeeded = true;
     }
-    private void ShipOnline(Vessel vessel) {
-        activeVessels.Add(vessel);
+
+    void Update() {
+        if (!pluginActive) return;
+        if (updateNeeded) {
+            windowRect.height = 40;
+            activeVessels = FlightGlobals.Vessels.Where(
+                                v => v.loaded &&
+                                vesselFilter.isVesselTypeEnabled(v.vesselType));
+            updateNeeded = false;
+        }
     }
 
     private Vessel highlightedVessel = null;
@@ -40,16 +46,11 @@ public class SwitchActiveVessel : MonoBehaviour
     }
 
     private void jumpToVessel(Vessel vessel) {
-        FlightGlobals.ForceSetActiveVessel(vessel); // This is more like hittting `]`.
+        FlightGlobals.ForceSetActiveVessel(vessel);
     }
 
+    private VesselFilterUi vesselFilter  = VesselFilterUi.CreateSaneDefault();
 
-    public static Dictionary<Vessel, List<GameObject>> meshListLookup = new Dictionary<Vessel, List<GameObject>>();
-    public static Dictionary<GameObject, ProtoPartSnapshot> referencePart = new Dictionary<GameObject, ProtoPartSnapshot>();
-    public static List<Vessel> watchList = new List<Vessel>();
-
-
-    VesselFilterUi vesselFilter = VesselFilterUi.CreateSaneDefault(); // move to ui class
     private void WindowGUI(int windowID)
     {
         GUILayout.BeginVertical();
@@ -59,8 +60,6 @@ public class SwitchActiveVessel : MonoBehaviour
         Vessel clickedVessel = null;
         Vessel hoverVessel = null;
         foreach (var vessel in activeVessels) {
-            if (!vesselFilter.isVesselTypeEnabled(vessel.vesselType))
-                continue;
 
             if (GUILayout.Button(vessel.GetName()))
                 clickedVessel = vessel;
@@ -73,6 +72,11 @@ public class SwitchActiveVessel : MonoBehaviour
 
         highlight(hoverVessel);
 
+#if DEBUG
+        if (GUILayout.Button("clear log"))
+            debugLog .Clear();
+        GUILayout.Label(string.Join("\n", debugLog.ToArray()));
+#endif
         GUILayout.EndVertical();
         GUI.DragWindow(new Rect(0, 0, 1000, 20));
     }
@@ -81,7 +85,6 @@ public class SwitchActiveVessel : MonoBehaviour
         if (!this.pluginActive) return;
         var keepSkin = GUI.skin;
         GUI.skin = null;
-        windowRect.height = 40;
         windowRect = GUILayout.Window(1, windowRect, WindowGUI, "Switch To");
         GUI.skin = keepSkin;
     }
@@ -89,6 +92,8 @@ public class SwitchActiveVessel : MonoBehaviour
     void Start()
     {
         RenderingManager.AddToPostDrawQueue(3, drawGUI);
+
+        vesselFilter.interaction += () => scheduleUpdate(null);
 
         var config = KSP.IO.PluginConfiguration.CreateForType<SwitchActiveVessel>();
         config.load();
@@ -100,11 +105,26 @@ public class SwitchActiveVessel : MonoBehaviour
 
         setupToolbar();
 
-        GameEvents.onVesselGoOffRails.Add(ShipOnline);
-        GameEvents.onVesselCreate.Add(ShipOnline);
+        GameEvents.onVesselGoOffRails.Add(scheduleUpdate);
+        GameEvents.onVesselCreate.Add(scheduleUpdate);
+        GameEvents.onVesselLoaded.Add(scheduleUpdate);
+        GameEvents.onVesselWasModified.Add(scheduleUpdate);
+        GameEvents.onVesselChange.Add(scheduleUpdate);
+        GameEvents.onVesselGoOnRails.Add(scheduleUpdate);
+        GameEvents.onVesselDestroy.Add(scheduleUpdate);
+    }
 
-        GameEvents.onVesselGoOnRails.Add(ShipOffline);
-        GameEvents.onVesselDestroy.Add(ShipOffline);
+    EventData<Vessel>.OnEvent debug(String text, Action<Vessel> func) {
+        return (v) => {
+            print(text);
+            func(v);
+        };
+    }
+
+    EventData<T>.OnEvent debug<T>(String text) {
+        return (v) => {
+            print(text);
+        };
     }
 
     void OnDestroy()
@@ -118,13 +138,16 @@ public class SwitchActiveVessel : MonoBehaviour
         teardownToolbar();
 
         RenderingManager.RemoveFromPostDrawQueue(3, drawGUI);
-        GameEvents.onVesselGoOffRails.Remove(ShipOnline);
-        GameEvents.onVesselCreate.Remove(ShipOnline);
-
-        GameEvents.onVesselGoOnRails.Remove(ShipOffline);
-        GameEvents.onVesselDestroy.Remove(ShipOffline);
+        GameEvents.onVesselGoOffRails.Remove(scheduleUpdate);
+        GameEvents.onVesselCreate.Remove(scheduleUpdate);
+        GameEvents.onVesselLoaded.Remove(scheduleUpdate);
+        GameEvents.onVesselWasModified.Remove(scheduleUpdate);
+        GameEvents.onVesselChange.Remove(scheduleUpdate);
+        GameEvents.onVesselGoOnRails.Remove(scheduleUpdate);
+        GameEvents.onVesselDestroy.Remove(scheduleUpdate);
     }
 
+    private Toolbar.IButton toolbarButton;
     private void setupToolbar() {
         this.toolbarButton = Toolbar.ToolbarManager.Instance.add("switchvessel", "show");
         toolbarButton.TexturePath = "SwitchVessel/SwitchVessel";
@@ -136,15 +159,19 @@ public class SwitchActiveVessel : MonoBehaviour
         toolbarButton.Destroy();
     }
 
-    private static double doubleValue(ConfigNode node, string key) {
-        double v = 0d;
-        Double.TryParse(node.GetValue(key), out v);
-        return v;
-    }
-
     void print(string text) {
         MonoBehaviour.print("SwitchActive: " + text);
+#if DEBUG
+        debugLog.Add(text);
+        if (debugLog.Count > 40) {
+            debugLog.RemoveRange(0, 35);
+        }
+#endif
     }
+#if DEBUG
+    private List<string> debugLog = new List<string>();
+#endif
+
 }
 
 }

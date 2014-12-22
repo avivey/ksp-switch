@@ -8,6 +8,7 @@ namespace SwitchActiveVessel
 class VesselFilterUi
 {
     public SortedDictionary<VesselType, bool> filteredTypes ;
+    public event Action interaction;
 
     public VesselFilterUi(SortedDictionary<VesselType, bool> filteredTypes) {
         this.filteredTypes = filteredTypes;
@@ -48,13 +49,13 @@ class VesselFilterUi
             GUI.color = enabled ? originalColor : Color.black;
             if (GUILayout.Button("  ")) {
                 toggle(type);
+                interaction();
             }
             var button = GUILayoutUtility.GetLastRect();
             UiUtils.DrawOrbitIcon(button, type);
         }
 
         GUILayout.EndHorizontal();
-        // GUILayout.Label(MapView.OrbitIconsMap);
         GUI.color = originalColor;
     }
 }
