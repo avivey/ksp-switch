@@ -15,6 +15,7 @@ public class SwitchActiveVessel : MonoBehaviour
     private bool pluginActive = true;
     private Rect windowRect = new Rect();
 
+    private IList<EventData<Vessel>> gameEvents = new List<EventData<Vessel>>();
     private bool updateNeeded = true;
     private void scheduleUpdate(object __) {
         this.updateNeeded = true;
@@ -111,26 +112,16 @@ public class SwitchActiveVessel : MonoBehaviour
 
         setupToolbar();
 
-        GameEvents.onVesselGoOffRails.Add(scheduleUpdate);
-        GameEvents.onVesselCreate.Add(scheduleUpdate);
-        GameEvents.onVesselLoaded.Add(scheduleUpdate);
-        GameEvents.onVesselWasModified.Add(scheduleUpdate);
-        GameEvents.onVesselChange.Add(scheduleUpdate);
-        GameEvents.onVesselGoOnRails.Add(scheduleUpdate);
-        GameEvents.onVesselDestroy.Add(scheduleUpdate);
-    }
+        gameEvents.Add(GameEvents.onVesselGoOffRails);
+        gameEvents.Add(GameEvents.onVesselCreate);
+        gameEvents.Add(GameEvents.onVesselLoaded);
+        gameEvents.Add(GameEvents.onVesselWasModified);
+        gameEvents.Add(GameEvents.onVesselChange);
+        gameEvents.Add(GameEvents.onVesselGoOnRails);
+        gameEvents.Add(GameEvents.onVesselDestroy);
 
-    EventData<Vessel>.OnEvent debug(String text, Action<Vessel> func) {
-        return (v) => {
-            print(text);
-            func(v);
-        };
-    }
-
-    EventData<T>.OnEvent debug<T>(String text) {
-        return (v) => {
-            print(text);
-        };
+        foreach (var e in gameEvents)
+            e.Add(scheduleUpdate);
     }
 
     void OnDestroy()
@@ -144,13 +135,8 @@ public class SwitchActiveVessel : MonoBehaviour
         teardownToolbar();
 
         RenderingManager.RemoveFromPostDrawQueue(3, drawGUI);
-        GameEvents.onVesselGoOffRails.Remove(scheduleUpdate);
-        GameEvents.onVesselCreate.Remove(scheduleUpdate);
-        GameEvents.onVesselLoaded.Remove(scheduleUpdate);
-        GameEvents.onVesselWasModified.Remove(scheduleUpdate);
-        GameEvents.onVesselChange.Remove(scheduleUpdate);
-        GameEvents.onVesselGoOnRails.Remove(scheduleUpdate);
-        GameEvents.onVesselDestroy.Remove(scheduleUpdate);
+        foreach (var e in gameEvents)
+            e.Remove(scheduleUpdate);
     }
 
     private Toolbar.IButton toolbarButton;
