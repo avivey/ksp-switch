@@ -15,6 +15,11 @@ public class SwitchActiveVessel : MonoBehaviour
     private bool pluginActive = true;
     private Rect windowRect = new Rect();
 
+    private string errorMsg = null;
+    private void ClearErrorMsg(object __) {
+        errorMsg = null;
+    }
+
     private IList<EventData<Vessel>> gameEvents = new List<EventData<Vessel>>();
     private bool updateNeeded = true;
     private void scheduleUpdate(object __) {
@@ -40,15 +45,54 @@ public class SwitchActiveVessel : MonoBehaviour
 
         highlightedVessel = vessel;
 
-        if (highlightedVessel != null) {
-            var p = highlightedVessel.rootPart;
-            p.SetHighlightColor(Color.green);
-            p.SetHighlight(true, true);
-        }
+        if (highlightedVessel == null)
+            return;
+
+        Color color = Color.green;
+        if (!isSwitchAllowed(highlightedVessel))
+            color = Color.red;
+
+        var p = highlightedVessel.rootPart;
+        p.SetHighlightColor(color);
+        p.SetHighlight(true, true);
     }
 
-    private void jumpToVessel(Vessel vessel) {
-        FlightGlobals.ForceSetActiveVessel(vessel);
+    private void jumpToVessel(Vessel target) {
+        if (!target.loaded) {
+            print("Bug: Trying to switch to unloaded vessel " + target);
+            scheduleUpdate(null);
+            errorMsg = "Target ship was not loaded";
+            return;
+        }
+
+        if (!isSwitchAllowed(target))
+            return;
+
+        FlightGlobals.ForceSetActiveVessel(target);
+        FlightInputHandler.ResumeVesselCtrlState(FlightGlobals.ActiveVessel);
+    }
+
+    public bool isSwitchAllowed(Vessel target) {
+        if (FlightGlobals.ActiveVessel == target) {
+            errorMsg = "This is the active vessel.";
+            return false;
+        }
+        if (MapView.MapIsEnabled) {
+            errorMsg = "Can't switch while in map.";
+            return false;
+        }
+        if (InputLockManager.IsLocked(ControlTypes.VESSEL_SWITCHING)) {
+            errorMsg = "Switching is disabled.";
+            return false;
+        }
+
+        if (target.packed && FlightGlobals.ClearToSave() != ClearToSaveStatus.CLEAR)  {
+            errorMsg = "Game states forbids switching.";
+            return false;
+        }
+
+        errorMsg = null;
+        return true;
     }
 
     private VesselFilterUi vesselFilter  = VesselFilterUi.CreateSaneDefault();
@@ -74,10 +118,8 @@ public class SwitchActiveVessel : MonoBehaviour
                     && button.Contains(Event.current.mousePosition))
                 hoverVessel = vessel;
         }
-        if (clickedVessel != null)
-            jumpToVessel(clickedVessel);
 
-        highlight(hoverVessel);
+        GUILayout.Label(errorMsg);
 
 #if DEBUG
         if (GUILayout.Button("clear log"))
@@ -86,6 +128,11 @@ public class SwitchActiveVessel : MonoBehaviour
 #endif
         GUILayout.EndVertical();
         GUI.DragWindow(new Rect(0, 0, 1000, 20));
+
+        if (clickedVessel != null)
+            jumpToVessel(clickedVessel);
+
+        highlight(hoverVessel);
     }
     private void drawGUI()
     {
@@ -122,6 +169,7 @@ public class SwitchActiveVessel : MonoBehaviour
 
         foreach (var e in gameEvents)
             e.Add(scheduleUpdate);
+        GameEvents.onVesselChange.Add(ClearErrorMsg);
     }
 
     void OnDestroy()
@@ -137,6 +185,7 @@ public class SwitchActiveVessel : MonoBehaviour
         RenderingManager.RemoveFromPostDrawQueue(3, drawGUI);
         foreach (var e in gameEvents)
             e.Remove(scheduleUpdate);
+        GameEvents.onVesselChange.Remove(ClearErrorMsg);
     }
 
     private Toolbar.IButton toolbarButton;
