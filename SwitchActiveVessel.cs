@@ -3,8 +3,9 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using Toolbar;
+using System.Reflection;
 
-
+[assembly: AssemblyVersion("0.4")]
 namespace SwitchActiveVessel
 {
 [KSPAddon(KSPAddon.Startup.Flight, false)]
@@ -63,8 +64,13 @@ public class SwitchActiveVessel : MonoBehaviour
 
             if (GUILayout.Button(vessel.GetName()))
                 clickedVessel = vessel;
+            var button = GUILayoutUtility.GetLastRect();
+
+            var iconRect = new Rect(button.xMin, button.yMin, button.height, button.height);
+            UiUtils.DrawOrbitIcon(iconRect, vessel.vesselType);
+
             if (Event.current.type == EventType.Repaint
-                    && GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
+                    && button.Contains(Event.current.mousePosition))
                 hoverVessel = vessel;
         }
         if (clickedVessel != null)
