@@ -109,13 +109,15 @@ public class SwitchActiveVessel : MonoBehaviour
 
             if (GUILayout.Button(vessel.GetName()))
                 clickedVessel = vessel;
-            var button = GUILayoutUtility.GetLastRect();
+            var buttonArea = GUILayoutUtility.GetLastRect();
 
-            var iconRect = new Rect(button.xMin, button.yMin, button.height, button.height);
-            UiUtils.DrawOrbitIcon(iconRect, vessel.vesselType);
+            var buttonIcon = new Rect(buttonArea);
+            buttonIcon.width = buttonIcon.height;
+            buttonIcon.x += 4;
+            UiUtils.DrawOrbitIcon(buttonIcon, vessel.vesselType);
 
             if (Event.current.type == EventType.Repaint
-                    && button.Contains(Event.current.mousePosition))
+                    && buttonArea.Contains(Event.current.mousePosition))
                 hoverVessel = vessel;
         }
 
