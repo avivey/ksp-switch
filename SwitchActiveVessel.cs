@@ -5,7 +5,7 @@ using UnityEngine;
 using Toolbar;
 using System.Reflection;
 
-[assembly: AssemblyVersion("0.4")]
+[assembly: AssemblyVersion("0.4.1")]
 namespace SwitchActiveVessel
 {
 [KSPAddon(KSPAddon.Startup.Flight, false)]
@@ -41,6 +41,7 @@ public class SwitchActiveVessel : MonoBehaviour
     private void highlight(Vessel vessel) {
         if (highlightedVessel != null && highlightedVessel != vessel) {
             highlightedVessel.rootPart.SetHighlightDefault();
+            highlightedVessel.rootPart.SetHighlight(false, true);
         }
 
         highlightedVessel = vessel;
