@@ -5,7 +5,7 @@ using UnityEngine;
 using Toolbar;
 using System.Reflection;
 
-[assembly: AssemblyVersion("0.4.1")]
+[assembly: AssemblyVersion("0.5")]
 namespace SwitchActiveVessel
 {
 [KSPAddon(KSPAddon.Startup.Flight, false)]
@@ -42,6 +42,7 @@ public class SwitchActiveVessel : MonoBehaviour
         if (highlightedVessel != null && highlightedVessel != vessel) {
             highlightedVessel.rootPart.SetHighlightDefault();
             highlightedVessel.rootPart.SetHighlight(false, true);
+            highlightedVessel.Parts.ForEach(p => p.RecurseHighlight = false);
         }
 
         highlightedVessel = vessel;
@@ -53,9 +54,7 @@ public class SwitchActiveVessel : MonoBehaviour
         if (!isSwitchAllowed(highlightedVessel))
             color = Color.red;
 
-        var p = highlightedVessel.rootPart;
-        p.SetHighlightColor(color);
-        p.SetHighlight(true, true);
+        highlightedVessel.rootPart.highlightRecursive(color);
     }
 
     private void jumpToVessel(Vessel target) {
@@ -137,7 +136,8 @@ public class SwitchActiveVessel : MonoBehaviour
 
         highlight(hoverVessel);
     }
-    private void drawGUI()
+
+    private void OnGUI()
     {
         if (!this.pluginActive) return;
         var keepSkin = GUI.skin;
@@ -148,8 +148,6 @@ public class SwitchActiveVessel : MonoBehaviour
 
     void Start()
     {
-        RenderingManager.AddToPostDrawQueue(3, drawGUI);
-
         vesselFilter.interaction += () => scheduleUpdate(null);
 
         var config = KSP.IO.PluginConfiguration.CreateForType<SwitchActiveVessel>();
@@ -185,7 +183,6 @@ public class SwitchActiveVessel : MonoBehaviour
 
         teardownToolbar();
 
-        RenderingManager.RemoveFromPostDrawQueue(3, drawGUI);
         foreach (var e in gameEvents)
             e.Remove(scheduleUpdate);
         GameEvents.onVesselChange.Remove(ClearErrorMsg);
